@@ -19,8 +19,12 @@ const Login = () => {
     }));
   };
 
+  const [loading, setLoading] = useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return; 
+    setLoading(true);
     setError('');
 
     try {
