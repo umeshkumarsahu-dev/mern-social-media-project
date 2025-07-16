@@ -102,8 +102,7 @@ A full-stack social media web application built with the **MERN stack (MongoDB, 
 ![alt text](image-1.png)
 
 # 📝 Home / Post Feed
-![alt text](image-2.png)
-![alt text](image-3.png)
+![alt text](image-5.png)
 
 
 ### 🌐 Live Demo
