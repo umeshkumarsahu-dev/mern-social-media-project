@@ -10,6 +10,10 @@ const Home = () => {
   const [editedContent, setEditedContent] = useState('');
   const [userId, setUserId] = useState('');
   const [page, setPage] = useState(1);
+  const [commentInputs, setCommentInputs] = useState({});
+  const [likes, setLikes] = useState({});
+  const [showCommentBox, setShowCommentBox] = useState({});
+  const [expandedPosts, setExpandedPosts] = useState({});
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -92,6 +96,45 @@ const Home = () => {
     }
   };
 
+  const handleLike = async (postId) => {
+    try {
+      await API.patch(`/posts/like/${postId}`);
+      fetchPosts();
+    } catch (error) {
+      console.error("Like failed", error);
+    }
+  };
+
+  const handleAddComment = async (e, postId) => {
+    e.preventDefault();
+    const content = commentInputs[postId];
+    if (!content) return;
+
+    try {
+      await API.post(`/posts/${postId}/comments`, { content });
+      setCommentInputs({ ...commentInputs, [postId]: '' });
+      fetchPosts();
+    } catch (error) {
+      console.error("Comment failed", error);
+    }
+  };
+
+  const handleReply = async (e, postId, commentId) => {
+    e.preventDefault();
+    const key = `reply-${postId}-${commentId}`;
+    const content = commentInputs[key];
+    if (!content) return;
+
+    try {
+      await API.post(`/posts/${postId}/comments/${commentId}/replies`, { content });
+      setCommentInputs({ ...commentInputs, [key]: '' });
+      fetchPosts();
+    } catch (error) {
+      console.error("Reply failed", error);
+    }
+  };
+
+
   return (
     <div className="container mt-5">
       <h2 className="text-primary text-center mb-4">📝 Share a Post</h2>
@@ -137,19 +180,154 @@ const Home = () => {
                 </>
               ) : (
                 <>
-                  <p className="card-text">{post.content}</p>
-                  <p className="text-muted small">
-                    <strong>By:</strong> {post.author.fullName} ({post.author.username}) <br />
-                    <strong>At:</strong> {new Date(post.createdAt).toLocaleString()}
-                    {post.edited && <span className="ms-2 text-warning">(edited)</span>}
-                  </p>
-
-                  {post.author._id === userId && (
-                    <div className="text-end">
-                      <button className="btn btn-outline-primary btn-sm me-2" onClick={() => handleEdit(post)}>Edit</button>
-                      <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(post._id)}>Delete</button>
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <p className="card-text mb-1">{post.content}</p>
+                      <p className="text-muted small mb-0">
+                        <strong>By:</strong> {post.author.fullName} ({post.author.username})<br />
+                        <strong>At:</strong> {new Date(post.createdAt).toLocaleString()}
+                        {post.edited && <span className="ms-2 text-warning">(edited)</span>}
+                      </p>
                     </div>
+
+                    {post.author._id === userId && (
+                      <div className="dropdown">
+                        <button
+                          className="btn btn-sm btn-outline-secondary dropdown-toggle"
+                          type="button"
+                          id={`dropdownMenuButton-${post._id}`}
+                          data-bs-toggle="dropdown"
+                          aria-expanded="false"
+                        >
+                          ⋯
+                        </button>
+                        <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdownMenuButton-${post._id}`}>
+                          <li>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => handleEdit(post)}
+                            >
+                              ✏️ Edit
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              className="dropdown-item text-danger"
+                              onClick={() => handleDelete(post._id)}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+
+                    )}
+                  </div>
+
+
+
+                  <div className="d-flex justify-content-between text-muted small mb-2">
+                    <span>❤️ {post.likes.length} Likes</span>
+                    <span>💬 {post.comments.length} Comments</span>
+                  </div>
+
+                  <hr></hr>
+                  <div className="d-flex justify-content-around mb-2">
+                    <button
+                      className={`btn btn-sm ${post.likes.includes(userId) ? 'btn-danger' : 'btn-outline-danger'}`}
+                      onClick={() => handleLike(post._id)}
+                    >
+                      ❤️ Like
+                    </button>
+
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() =>
+                        setShowCommentBox({ ...showCommentBox, [post._id]: !showCommentBox[post._id] })
+                      }
+                    >
+                      💬 Comment
+                    </button>
+                  </div>
+
+                  {showCommentBox[post._id] && (
+                    <>
+                      <form onSubmit={(e) => handleAddComment(e, post._id)} className="d-flex mb-2">
+                        <input
+                          type="text"
+                          className="form-control form-control-sm me-2"
+                          placeholder="Add a comment..."
+                          value={commentInputs[post._id] || ''}
+                          onChange={(e) =>
+                            setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
+                          }
+                        />
+                        <button type="submit" className="btn btn-sm btn-primary">Post</button>
+                      </form>
+
+                      {(expandedPosts[post._id] ? post.comments : post.comments.slice(0, 2)).map((c, i) => (
+                        <div key={i} className="ps-3 border-start mt-2">
+                          <small className="text-muted d-block">💬 {c.content}</small>
+
+                          {c.replies?.map((r, j) => (
+                            <div key={j} className="ps-3 border-start mt-1">
+                              <small className="text-muted">↳ {r.content}</small>
+                            </div>
+                          ))}
+
+                          <form
+                            onSubmit={(e) => handleReply(e, post._id, c._id)}
+                            className="d-flex mt-1"
+                          >
+                            <input
+                              type="text"
+                              className="form-control form-control-sm me-2"
+                              placeholder="Reply..."
+                              value={commentInputs[`reply-${post._id}-${c._id}`] || ''}
+                              onChange={(e) =>
+                                setCommentInputs({
+                                  ...commentInputs,
+                                  [`reply-${post._id}-${c._id}`]: e.target.value,
+                                })
+                              }
+                            />
+                            <button className="btn btn-sm btn-secondary">Reply</button>
+                          </form>
+                        </div>
+                      ))}
+
+                      {post.comments.length > 2 && !expandedPosts[post._id] && (
+                        <div className="mt-1">
+                          <button
+                            className="btn btn-link btn-sm p-0"
+                            onClick={() =>
+                              setExpandedPosts({ ...expandedPosts, [post._id]: true })
+                            }
+                          >
+                            View all {post.comments.length} comments
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
+
+                  {/* {post.author._id === userId && (
+                    <div className="text-end mt-2">
+                      <button
+                        className="btn btn-outline-primary btn-sm me-2"
+                        onClick={() => handleEdit(post)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => handleDelete(post._id)}
+                      >
+                        Delete
+                      </button>
+
+                    </div>
+                  )} */}
                 </>
               )}
             </div>
@@ -157,7 +335,7 @@ const Home = () => {
         ))
       )}
 
-      <div className="d-flex justify-content-between align-items-center mt-4">
+      <div className="d-flex justify-content-between align-items-center my-4">
         <button
           className="btn btn-outline-secondary"
           disabled={page === 1}

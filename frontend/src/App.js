@@ -36,6 +36,10 @@ function AppRoutes() {
           path="/register"
           element={isAuthenticated ? <Navigate to="/" /> : <Register />}
         />
+        <Route
+          path="*"
+          element={<Navigate to={isAuthenticated ? "/" : "/login"} />}
+        />
       </Routes>
     </>
   );

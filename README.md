@@ -49,9 +49,9 @@ A full-stack social media web application built with the **MERN stack (MongoDB, 
 
 3. Create a .env file in the backend folder and add the following:  
 
-    MONGODB_URI=your_mongodb_connection_string
-    JWT_SECRET=your_jwt_secret_key
-    PORT=5000
+    MONGODB_URI=your_mongodb_connection_string<br>
+    JWT_SECRET=your_jwt_secret_key<br>
+    PORT=5000<br>
 
 4. Start the backend server:
 
@@ -112,27 +112,28 @@ A full-stack social media web application built with the **MERN stack (MongoDB, 
 
 # 📁 Project Structure
 
-mern-social-media/
-├── backend/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middleware/
-│   ├── server.js
-│   └── .env
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── utils/
-│   │   └── App.js
-│   └── public/
-├── .gitignore
-├── README.md
+mern-social-media/<br>
+├── backend/<br>
+│   ├── controllers/<br>
+│   ├── models/<br>
+│   ├── routes/<br>
+│   ├── middleware/<br>
+│   ├── server.js<br>
+│   └── .env<br>
+├── frontend/<br>
+│   ├── src/<br>
+│   │   ├── components/<br>
+│   │   ├── pages/<br>
+│   │   ├── utils/<br>
+│   │   └── App.js<br>
+│   └── public/<br>
+├── .gitignore<br>
+├── README.md<br>
 
 
 ### 👨‍💻 Author
 
-Umesh Kumar Sahu
-📧 sahuumesh540@gmail.com
+Umesh Kumar Sahu<br>
+📧 sahuumesh540@gmail.com<br>
 https://www.linkedin.com/in/umeshkumarsahu-dev/
+

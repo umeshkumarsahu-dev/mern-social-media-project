@@ -100,3 +100,78 @@ exports.deletePost = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.likePost = async (req, res) => {
+  const { postId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    const index = post.likes.indexOf(userId);
+
+    if (index === -1) {
+      post.likes.push(userId); 
+    } else {
+      post.likes.splice(index, 1); 
+    }
+
+    await post.save();
+    res.status(200).json({ message: 'Like updated', likes: post.likes.length });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.addComment = async (req, res) => {
+  const { postId } = req.params;
+  const { content } = req.body;
+
+  console.log("👉 postId from params:", postId);
+  console.log("👉 comment content from body:", content);
+  console.log("👉 userId from token middleware:", req.user.userId);
+
+  try {
+    const post = await Post.findById(postId);
+    console.log("👉 Found post:", post);
+
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    post.comments.push({
+      content,
+      author: req.user.userId,
+      createdAt: new Date()
+    });
+
+    await post.save();
+    res.status(200).json({ message: 'Comment added' });
+  } catch (err) {
+    console.error("🔥 Internal Server Error:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.addReply = async (req, res) => {
+  const { postId, commentId } = req.params;
+  const { content } = req.body;
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+    comment.replies.push({
+      content,
+      author: req.user.userId,
+      createdAt: new Date()
+    });
+
+    await post.save();
+    res.status(200).json({ message: 'Reply added' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};

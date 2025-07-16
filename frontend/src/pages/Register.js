@@ -28,7 +28,12 @@ const Register = () => {
       // alert('Registration successful! Now login.');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const errors = err.response?.data?.errors;
+      if (errors && errors.length > 0) {
+        setError(errors.map((e) => e.msg).join(' | ')); 
+      } else {
+        setError(err.response?.data?.message || 'Registration failed');
+      }
     }
   };
 
