@@ -1,72 +1,138 @@
-# mern-social-media
+# 🧑‍🤝 MERN Social Media App
 
-# Getting Started with Create React App
+A full-stack social media web application built with the **MERN stack (MongoDB, Express.js, React.js, Node.js)**. Users can register, log in, create, edit, and delete posts.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+---
 
-## Available Scripts
+## 🚀 Features
 
-In the project directory, you can run:
+- 🔐 User Authentication (JWT-based)
+- 📝 Create, edit, delete posts
+- 👥 View all users' posts
+- 📱 Fully responsive UI with Bootstrap
+- ✅ Toast notifications and error handling
+- 🔁 Pagination for post feed
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## 🛠️ Technology Stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Frontend:
+- React.js
+- React Router
+- Axios
+- Bootstrap 5
+- React Toastify
 
-### `npm test`
+### Backend:
+- Node.js
+- Express.js
+- MongoDB (Atlas)
+- Mongoose
+- JSON Web Token (JWT)
+- Dotenv
+- CORS
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## 📦 Setup Instructions
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 🔧 Backend Setup
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. Navigate to the backend directory:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   cd backend
 
-### `npm run eject`
+2. Install backend dependencies:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+    npm install
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Create a .env file in the backend folder and add the following:  
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+    MONGODB_URI=your_mongodb_connection_string
+    JWT_SECRET=your_jwt_secret_key
+    PORT=5000
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+4. Start the backend server:
 
-## Learn More
+    npm start
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 🎨 Frontend Setup
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. Navigate to the frontend directory:
 
-### Code Splitting
+    cd frontend
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+2. Install frontend dependencies:
 
-### Analyzing the Bundle Size
+    npm install
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+3. Start the frontend app:
 
-### Making a Progressive Web App
+    npm start
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+4. Open your browser and go to:
 
-### Advanced Configuration
+    http://localhost:3000
+  
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### 🧪 API Endpoints
 
-### Deployment
+# 🔐 Auth Routes
+| Method | Endpoint             | Description         |
+| ------ | -------------------- | ------------------- |
+| POST   | `/api/auth/register` | Register a new user |
+| POST   | `/api/auth/login`    | Login user          |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+# 📝 Post Routes (Protected)
+| Method | Endpoint         | Description         |
+| ------ | ---------------- | ------------------- |
+| GET    | `/api/posts`     | Get paginated posts |
+| POST   | `/api/posts`     | Create new post     |
+| PUT    | `/api/posts/:id` | Update post by ID   |
+| DELETE | `/api/posts/:id` | Delete post by ID   |
 
-### `npm run build` fails to minify
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### 📸 Screenshots
+
+# 🔐 Login Page
+![alt text](image.png)
+
+# Register Page
+![alt text](image-1.png)
+
+# 📝 Home / Post Feed
+![alt text](image-2.png)
+![alt text](image-3.png)
+
+
+### 🌐 Live Demo
+
+🔗 https://social-frontend-topaz.vercel.app
+
+# 📁 Project Structure
+
+mern-social-media/
+├── backend/
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   ├── middleware/
+│   ├── server.js
+│   └── .env
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── utils/
+│   │   └── App.js
+│   └── public/
+├── .gitignore
+├── README.md
+
+
+### 👨‍💻 Author
+
+Umesh Kumar Sahu
+📧 sahuumesh540@gmail.com
+https://www.linkedin.com/in/umeshkumarsahu-dev/
