@@ -1,33 +1,6 @@
-# Node modules
+# in root .gitignore
 node_modules/
-
-# Build output
-dist/
-build/
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# dotenv environment variables
 .env
-
-# Mac system files
 .DS_Store
-
-# IDE files
-.vscode/
-.idea/
-
-# OS files
-Thumbs.db
-
-# Coverage (if using testing tools)
-coverage/
-
-# Local MongoDB database (if any)
-*.local
-
-# Optional: ignore static uploads (if applicable)
-uploads/
+build/
+dist/
