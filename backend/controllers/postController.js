@@ -128,13 +128,8 @@ exports.addComment = async (req, res) => {
   const { postId } = req.params;
   const { content } = req.body;
 
-  console.log("👉 postId from params:", postId);
-  console.log("👉 comment content from body:", content);
-  console.log("👉 userId from token middleware:", req.user.userId);
-
   try {
     const post = await Post.findById(postId);
-    console.log("👉 Found post:", post);
 
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
@@ -147,7 +142,7 @@ exports.addComment = async (req, res) => {
     await post.save();
     res.status(200).json({ message: 'Comment added' });
   } catch (err) {
-    console.error("🔥 Internal Server Error:", err);
+    console.error("Internal Server Error:", err);
     res.status(500).json({ message: 'Server error' });
   }
 };

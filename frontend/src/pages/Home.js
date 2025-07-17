@@ -96,12 +96,18 @@ const Home = () => {
     }
   };
 
+  const [likeLoadingPostId, setLikeLoadingPostId] = useState(null);
   const handleLike = async (postId) => {
+    if (likeLoadingPostId === postId) return; // already processing this post
+
+    setLikeLoadingPostId(postId);
     try {
       await API.patch(`/posts/like/${postId}`);
       fetchPosts();
     } catch (error) {
       console.error("Like failed", error);
+    } finally {
+      setLikeLoadingPostId(null);
     }
   };
 
@@ -236,8 +242,9 @@ const Home = () => {
                     <button
                       className={`btn btn-sm ${post.likes.includes(userId) ? 'btn-danger' : 'btn-outline-danger'}`}
                       onClick={() => handleLike(post._id)}
+                       disabled={likeLoadingPostId === post._id}
                     >
-                      ❤️ Like
+                      ❤️ {likeLoadingPostId === post._id ? "Liking..." : "Like"}
                     </button>
 
                     <button
