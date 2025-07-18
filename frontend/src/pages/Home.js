@@ -140,6 +140,25 @@ const Home = () => {
     }
   };
 
+  const characterLimit = 200; // Limit to 200 characters
+
+  const isTruncated = (content) => content.length > characterLimit;
+
+  const getDisplayContent = (content, postId) => {
+    if (expandedPosts[postId] || !isTruncated(content)) {
+      return content;
+    }
+    return content.slice(0, characterLimit) + '...';
+  };
+
+  const toggleExpanded = (postId) => {
+    setExpandedPosts((prev) => ({
+      ...prev,
+      [postId]: !prev[postId],
+    }));
+  };
+
+
 
   return (
     <div className="container mt-5">
@@ -188,7 +207,19 @@ const Home = () => {
                 <>
                   <div className="d-flex justify-content-between align-items-start">
                     <div>
-                      <p className="card-text mb-1">{post.content}</p>
+                      <pre className="card-text mb-1" style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                        {getDisplayContent(post.content, post._id)}
+                        {isTruncated(post.content) && (
+                          <span
+                            onClick={() => toggleExpanded(post._id)}
+                            style={{ color: 'blue', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            {expandedPosts[post._id] ? ' Show less' : ' Read more'}
+                          </span>
+                        )}
+                      </pre>
+
+                      {/* <p className="card-text mb-1">{post.content}</p> */}
                       <p className="text-muted small mb-0">
                         <strong>By:</strong> {post.author.fullName} ({post.author.username})<br />
                         <strong>At:</strong> {new Date(post.createdAt).toLocaleString()}
