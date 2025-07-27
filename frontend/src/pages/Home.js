@@ -19,6 +19,9 @@ const Home = () => {
   const [expandedPosts, setExpandedPosts] = useState({});
   const [mediaFile, setMediaFile] = useState(null);
   const fileInputRef = useRef();
+  const pageRef = useRef(1);
+  const loadingRef = useRef(false);
+
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -32,15 +35,15 @@ const Home = () => {
     try {
       const res = await API.get(`/posts?page=${pageNum}`);
       setPosts(res.data.posts);
-      setPage(2); // because first fetch is page 1
-      // setPage(pageNum
+      setPage(pageNum); // set to the actual page number
+      pageRef.current = pageNum + 1; // next page to load for infinite scroll
     } catch (err) {
       console.error("Fetch error:", err);
     }
   };
 
   useEffect(() => {
-    fetchPosts();
+    fetchPosts(1); // always start from page 1
   }, []);
 
   useEffect(() => {
@@ -198,10 +201,14 @@ const Home = () => {
     }));
   };
 
+
   const loadMorePosts = async () => {
+    if (loadingRef.current || loading) return;
+
     setLoading(true);
+    loadingRef.current = true;
     try {
-      const res = await API.get(`/posts?page=${page}&limit=10`);
+      const res = await API.get(`/posts?page=${pageRef.current}&limit=10`);
       const newPosts = res.data.posts;
 
       if (newPosts.length === 0) {
@@ -212,12 +219,14 @@ const Home = () => {
           const filteredPosts = newPosts.filter((p) => !existingIds.has(p._id));
           return [...prevPosts, ...filteredPosts];
         });
-        setPage((prev) => prev + 1);
+        setPage(pageRef.current); // update current page
+        pageRef.current += 1; // increment for next scroll
       }
     } catch (error) {
       console.error("Error loading more posts", error);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -438,25 +447,7 @@ const Home = () => {
           </div>
         ))
       )}
-
-      {/* Pagination */}
-      {/* <div className="d-flex justify-content-center align-items-center gap-3 my-4">
-        <button
-          className="btn btn-outline-secondary"
-          disabled={page === 1}
-          onClick={() => fetchPosts(page - 1)}
-        >
-          ⬅ Previous
-        </button>
-        <span className="fw-bold">Page {page}</span>
-        <button
-          className="btn btn-outline-secondary"
-          disabled={posts.length < 10}
-          onClick={() => fetchPosts(page + 1)}
-        >
-          Next ➡
-        </button>
-      </div> */}
+      
       {loading && (
         <div className="text-center my-3">
           <div className="spinner-border text-primary" role="status">
