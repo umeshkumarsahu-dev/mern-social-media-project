@@ -328,7 +328,7 @@ const Home = () => {
                     <div className="text-center my-3">
                       {post.media.contentType.startsWith("image") ? (
                         <img
-                          src={`http://localhost:5000/api/posts/media/${post._id}`}
+                          src={`https://mern-backend-s6eq.onrender.com/api/posts/media/${post._id}`}
                           alt="Post"
                           className="img-fluid rounded"
                           style={{ maxHeight: "300px", objectFit: "cover" }}
@@ -336,7 +336,7 @@ const Home = () => {
                       ) : post.media.contentType.startsWith("video") ? (
                         <video controls className="w-100 rounded" style={{ maxHeight: "300px" }}>
                           <source
-                            src={`http://localhost:5000/api/posts/media/${post._id}`}
+                            src={`https://mern-backend-s6eq.onrender.com/api/posts/media/${post._id}`}
                             type={post.media.contentType}
                           />
                           Your browser does not support the video tag.
