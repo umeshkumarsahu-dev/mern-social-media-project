@@ -34,7 +34,10 @@ const commentSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
+const mediaSchema = new mongoose.Schema({
+  data: Buffer,
+  contentType: String,
+});
 // Post Schema
 const postSchema = new mongoose.Schema({
   content: {
@@ -46,6 +49,7 @@ const postSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  media: mediaSchema,
   likes: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

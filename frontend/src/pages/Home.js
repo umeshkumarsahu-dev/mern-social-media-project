@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
+import { useRef } from 'react';
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
@@ -10,10 +11,14 @@ const Home = () => {
   const [editedContent, setEditedContent] = useState('');
   const [userId, setUserId] = useState('');
   const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [commentInputs, setCommentInputs] = useState({});
   const [likes, setLikes] = useState({});
   const [showCommentBox, setShowCommentBox] = useState({});
   const [expandedPosts, setExpandedPosts] = useState({});
+  const [mediaFile, setMediaFile] = useState(null);
+  const fileInputRef = useRef();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -27,7 +32,8 @@ const Home = () => {
     try {
       const res = await API.get(`/posts?page=${pageNum}`);
       setPosts(res.data.posts);
-      setPage(pageNum);
+      setPage(2); // because first fetch is page 1
+      // setPage(pageNum
     } catch (err) {
       console.error("Fetch error:", err);
     }
@@ -37,22 +43,56 @@ const Home = () => {
     fetchPosts();
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const fullHeight = document.documentElement.scrollHeight;
+
+      if (!loading && hasMore && scrollTop + windowHeight >= fullHeight - 100) {
+        loadMorePosts();
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loading, hasMore]);
+
+
   const handlePostSubmit = async (e) => {
     e.preventDefault();
-    if (!newPost.trim()) return;
+    if (!newPost.trim() && !mediaFile) return;
+
+    const formData = new FormData();
+    formData.append("content", newPost);
+    if (mediaFile) {
+      formData.append("media", mediaFile);
+    }
+
+    console.log('Submitting post:', { content: newPost, mediaFile });
 
     try {
-      await API.post('/posts', { content: newPost });
+      await API.post('/posts', formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+
       toast.success("Post created successfully!");
+
+      // Reset state and file input field
       setNewPost('');
-      fetchPosts();
+      setMediaFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
+      }
+
+      fetchPosts(); // Refresh post list
     } catch (err) {
-      console.error("Post creation failed:", err);
-      toast.error("Post creation failed.");
+      toast.error("Failed to post");
+      console.error(err);
     }
   };
-
-
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -158,39 +198,70 @@ const Home = () => {
     }));
   };
 
+  const loadMorePosts = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get(`/posts?page=${page}&limit=10`);
+      const newPosts = res.data.posts;
 
+      if (newPosts.length === 0) {
+        setHasMore(false);
+      } else {
+        setPosts((prevPosts) => {
+          const existingIds = new Set(prevPosts.map((p) => p._id));
+          const filteredPosts = newPosts.filter((p) => !existingIds.has(p._id));
+          return [...prevPosts, ...filteredPosts];
+        });
+        setPage((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error("Error loading more posts", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="container mt-5">
-      <h2 className="text-primary text-center mb-4">📝 Share a Post</h2>
-
-      <form onSubmit={handlePostSubmit} className="mb-4">
-        <div className="form-floating">
-          <textarea
-            className="form-control"
-            placeholder="What's on your mind?"
-            id="postContent"
-            style={{ height: '100px' }}
-            value={newPost}
-            onChange={(e) => setNewPost(e.target.value)}
-          ></textarea>
-          <label htmlFor="postContent">What's on your mind?</label>
+      {/* Share Post Card */}
+      <div className="card shadow-sm mb-5">
+        <div className="card-body">
+          <h4 className="text-center text-primary mb-4">📝 Share a Post</h4>
+          <form onSubmit={handlePostSubmit} encType="multipart/form-data">
+            <div className="form-floating mb-3">
+              <textarea
+                className="form-control"
+                placeholder="What's on your mind?"
+                style={{ height: '100px' }}
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                required
+              ></textarea>
+              <label>What's on your mind?</label>
+            </div>
+            <input
+              type="file"
+              className="form-control mb-3"
+              ref={fileInputRef}
+              onChange={(e) => setMediaFile(e.target.files[0])}
+            />
+            <div className="text-end">
+              <button type="submit" className="btn btn-primary px-4">Post</button>
+            </div>
+          </form>
         </div>
-        <div className="text-end mt-2">
-          <button type="submit" className="btn btn-primary">Post</button>
-        </div>
-      </form>
+      </div>
 
-      <hr />
-
-      <h3 className="text-center mb-3">📢 Recent Posts</h3>
-
+      {/* Recent Posts */}
+      <h3 className="text-center mb-4">📢 Recent Posts</h3>
       {posts.length === 0 ? (
         <p className="text-muted text-center">No posts yet.</p>
       ) : (
         posts.map((post) => (
-          <div key={post._id} className="card mb-3 shadow-sm">
+          <div key={post._id || `${post.createdAt}-${Math.random()}`}
+            className="card mb-4 shadow-sm">
             <div className="card-body">
+              {/* Edit Mode */}
               {editingPostId === post._id ? (
                 <>
                   <textarea
@@ -205,75 +276,89 @@ const Home = () => {
                 </>
               ) : (
                 <>
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <pre className="card-text mb-1" style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
-                        {getDisplayContent(post.content, post._id)}
-                        {isTruncated(post.content) && (
-                          <span
-                            onClick={() => toggleExpanded(post._id)}
-                            style={{ color: 'blue', cursor: 'pointer', fontWeight: 'bold' }}
-                          >
-                            {expandedPosts[post._id] ? ' Show less' : ' Read more'}
-                          </span>
-                        )}
-                      </pre>
-
-                      {/* <p className="card-text mb-1">{post.content}</p> */}
-                      <p className="text-muted small mb-0">
-                        <strong>By:</strong> {post.author.fullName} ({post.author.username})<br />
-                        <strong>At:</strong> {new Date(post.createdAt).toLocaleString()}
+                  {/* Post Header */}
+                  <div className="d-flex align-items-center mb-3">
+                    <img
+                      src={`https://ui-avatars.com/api/?name=${post.author?.fullName || "User"}&background=random`}
+                      alt="avatar"
+                      className="rounded-circle me-3"
+                      width="50"
+                      height="50"
+                    />
+                    <div className="flex-grow-1">
+                      <strong>{post.author?.fullName} ({post.author?.username})</strong>
+                      <div className="text-muted small">
+                        {new Date(post.createdAt).toLocaleString()}
                         {post.edited && <span className="ms-2 text-warning">(edited)</span>}
-                      </p>
+                      </div>
                     </div>
-
-                    {post.author._id === userId && (
+                    {post.author?._id === userId && (
                       <div className="dropdown">
                         <button
                           className="btn btn-sm btn-outline-secondary dropdown-toggle"
                           type="button"
-                          id={`dropdownMenuButton-${post._id}`}
                           data-bs-toggle="dropdown"
                           aria-expanded="false"
                         >
                           ⋯
                         </button>
-                        <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdownMenuButton-${post._id}`}>
-                          <li>
-                            <button
-                              className="dropdown-item"
-                              onClick={() => handleEdit(post)}
-                            >
-                              ✏️ Edit
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              className="dropdown-item text-danger"
-                              onClick={() => handleDelete(post._id)}
-                            >
-                              🗑️ Delete
-                            </button>
-                          </li>
+                        <ul className="dropdown-menu dropdown-menu-end">
+                          <li><button className="dropdown-item" onClick={() => handleEdit(post)}>✏️ Edit</button></li>
+                          <li><button className="dropdown-item text-danger" onClick={() => handleDelete(post._id)}>🗑️ Delete</button></li>
                         </ul>
                       </div>
-
                     )}
                   </div>
 
+                  {/* Post Content */}
+                  <pre className="mb-2 card-text" style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                    {getDisplayContent(post.content, post._id)}
+                    {isTruncated(post.content) && (
+                      <span
+                        onClick={() => toggleExpanded(post._id)}
+                        style={{ color: 'blue', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                        {expandedPosts[post._id] ? ' Show less' : ' Read more'}
+                      </span>
+                    )}
+                  </pre>
 
+                  {/* Media */}
+                  {post.media?.contentType && (
+                    <div className="text-center my-3">
+                      {post.media.contentType.startsWith("image") ? (
+                        <img
+                          src={`http://localhost:5000/api/posts/media/${post._id}`}
+                          alt="Post"
+                          className="img-fluid rounded"
+                          style={{ maxHeight: "300px", objectFit: "cover" }}
+                        />
+                      ) : post.media.contentType.startsWith("video") ? (
+                        <video controls className="w-100 rounded" style={{ maxHeight: "300px" }}>
+                          <source
+                            src={`http://localhost:5000/api/posts/media/${post._id}`}
+                            type={post.media.contentType}
+                          />
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <p className="text-muted">Unsupported media type</p>
+                      )}
+                    </div>
+                  )}
 
+                  {/* Like/Comment Summary */}
                   <div className="d-flex justify-content-between text-muted small mb-2">
                     <span>❤️ {post.likes.length} Likes</span>
                     <span>💬 {post.comments.length} Comments</span>
                   </div>
 
-                  <hr></hr>
-                  <div className="d-flex justify-content-around mb-2">
+                  {/* Like & Comment Buttons */}
+                  <div className="d-flex justify-content-around mb-3">
                     <button
                       className={`btn btn-sm ${post.likes.includes(userId) ? 'btn-danger' : 'btn-outline-danger'}`}
                       onClick={() => handleLike(post._id)}
-                       disabled={likeLoadingPostId === post._id}
+                      disabled={likeLoadingPostId === post._id}
                     >
                       ❤️ {likeLoadingPostId === post._id ? "Liking..." : "Like"}
                     </button>
@@ -288,8 +373,10 @@ const Home = () => {
                     </button>
                   </div>
 
+                  {/* Comment Box */}
                   {showCommentBox[post._id] && (
                     <>
+                      {/* New Comment */}
                       <form onSubmit={(e) => handleAddComment(e, post._id)} className="d-flex mb-2">
                         <input
                           type="text"
@@ -303,20 +390,16 @@ const Home = () => {
                         <button type="submit" className="btn btn-sm btn-primary">Post</button>
                       </form>
 
+                      {/* Comments & Replies */}
                       {(expandedPosts[post._id] ? post.comments : post.comments.slice(0, 2)).map((c, i) => (
                         <div key={i} className="ps-3 border-start mt-2">
                           <small className="text-muted d-block">💬 {c.content}</small>
-
                           {c.replies?.map((r, j) => (
                             <div key={j} className="ps-3 border-start mt-1">
                               <small className="text-muted">↳ {r.content}</small>
                             </div>
                           ))}
-
-                          <form
-                            onSubmit={(e) => handleReply(e, post._id, c._id)}
-                            className="d-flex mt-1"
-                          >
+                          <form onSubmit={(e) => handleReply(e, post._id, c._id)} className="d-flex mt-1">
                             <input
                               type="text"
                               className="form-control form-control-sm me-2"
@@ -334,8 +417,9 @@ const Home = () => {
                         </div>
                       ))}
 
+                      {/* View All Comments */}
                       {post.comments.length > 2 && !expandedPosts[post._id] && (
-                        <div className="mt-1">
+                        <div className="mt-2 text-start">
                           <button
                             className="btn btn-link btn-sm p-0"
                             onClick={() =>
@@ -348,24 +432,6 @@ const Home = () => {
                       )}
                     </>
                   )}
-
-                  {/* {post.author._id === userId && (
-                    <div className="text-end mt-2">
-                      <button
-                        className="btn btn-outline-primary btn-sm me-2"
-                        onClick={() => handleEdit(post)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => handleDelete(post._id)}
-                      >
-                        Delete
-                      </button>
-
-                    </div>
-                  )} */}
                 </>
               )}
             </div>
@@ -373,7 +439,8 @@ const Home = () => {
         ))
       )}
 
-      <div className="d-flex justify-content-between align-items-center my-4">
+      {/* Pagination */}
+      {/* <div className="d-flex justify-content-center align-items-center gap-3 my-4">
         <button
           className="btn btn-outline-secondary"
           disabled={page === 1}
@@ -389,9 +456,19 @@ const Home = () => {
         >
           Next ➡
         </button>
-      </div>
+      </div> */}
+      {loading && (
+        <div className="text-center my-3">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      )}
+
     </div>
   );
+
+
 };
 
 export default Home;

@@ -1,25 +1,47 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
 
+exports.getPostMedia = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post || !post.media || !post.media.data) {
+      return res.status(404).send("Media not found");
+    }
+
+    res.set("Content-Type", post.media.contentType);
+    res.send(post.media.data);
+  } catch (error) {
+    console.error("Error serving media:", error);
+    res.status(500).send("Server Error");
+  }
+};
+
 exports.createPost = async (req, res) => {
   const { content } = req.body;
+  const author = req.user.userId;
+  const mediaFile = req.file;
 
-  if (!content || content.trim() === "") {
-    return res.status(400).json({ message: "Post content is required" });
+  if (!content && !mediaFile) {
+    return res.status(400).json({ message: "Post content or media is required" });
+  }
+
+  const postData = { content, author };
+
+  if (mediaFile) {
+    postData.media = {
+      data: mediaFile.buffer,
+      contentType: mediaFile.mimetype,
+    };
   }
 
   try {
-    const newPost = new Post({
-      content,
-      author: req.user.userId
-    });
-
+    const newPost = new Post(postData);
     await newPost.save();
-
+    await newPost.populate('author', 'fullName username');
     res.status(201).json(newPost);
   } catch (error) {
     console.error("Create post error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -146,7 +168,6 @@ exports.addComment = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 exports.addReply = async (req, res) => {
   const { postId, commentId } = req.params;
   const { content } = req.body;
@@ -170,3 +191,4 @@ exports.addReply = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
