@@ -78,27 +78,47 @@ exports.updatePost = async (req, res) => {
 
   try {
     const post = await Post.findById(postId);
-
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Check if logged-in user is the author
+    // Only author can edit
     if (post.author.toString() !== req.user.userId) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    post.content = content || post.content;
+    // Update text if provided
+    if (typeof content !== "undefined") {
+      post.content = content;
+    }
+
+    // If new media uploaded, replace existing one
+    if (req.file) {
+      post.media = {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+      };
+    }
+
     post.edited = true;
 
     const updatedPost = await post.save();
-    res.status(200).json(updatedPost);
+    await updatedPost.populate("author", "fullName username");
 
+    // Create cache-busting media URL
+    let updatedPostObj = updatedPost.toObject();
+    if (updatedPost.media && updatedPost.media.data) {
+      updatedPostObj.mediaUrl = `/media/${updatedPost._id}?t=${Date.now()}`;
+    }
+
+    res.status(200).json(updatedPostObj);
   } catch (error) {
-    console.error('Update post error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Update post error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
+
 
 exports.deletePost = async (req, res) => {
   const postId = req.params.id;

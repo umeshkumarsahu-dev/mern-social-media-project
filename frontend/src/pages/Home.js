@@ -1,10 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
-import { useRef } from 'react';
+
+// Constants
+const LOCAL_MEDIA_URL = 'http://localhost:5000/api/posts/media/';
+const REMOTE_MEDIA_URL = 'https://mern-backend-s6eq.onrender.com/api/posts/media/';
+
+const CHARACTER_LIMIT = 200;
 
 const Home = () => {
+  // State declarations
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [editingPostId, setEditingPostId] = useState(null);
@@ -14,38 +20,48 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [commentInputs, setCommentInputs] = useState({});
-  const [likes, setLikes] = useState({});
   const [showCommentBox, setShowCommentBox] = useState({});
   const [expandedPosts, setExpandedPosts] = useState({});
   const [mediaFile, setMediaFile] = useState(null);
+  const [editedMediaFile, setEditedMediaFile] = useState(null);
+  const [editedPreview, setEditedPreview] = useState(null);
+  const [likeLoadingPostId, setLikeLoadingPostId] = useState(null);
+
+  // Refs
   const fileInputRef = useRef();
   const pageRef = useRef(1);
   const loadingRef = useRef(false);
 
-
+  // Get userId from token
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setUserId(payload.userId);
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserId(payload.userId);
+      } catch {
+        setUserId('');
+      }
     }
   }, []);
 
-  const fetchPosts = async (pageNum = 1) => {
+  // Fetch posts
+  const fetchPosts = useCallback(async (pageNum = 1) => {
     try {
       const res = await API.get(`/posts?page=${pageNum}`);
       setPosts(res.data.posts);
-      setPage(pageNum); // set to the actual page number
-      pageRef.current = pageNum + 1; // next page to load for infinite scroll
+      setPage(pageNum);
+      pageRef.current = pageNum + 1;
     } catch (err) {
       console.error("Fetch error:", err);
     }
-  };
-
-  useEffect(() => {
-    fetchPosts(1); // always start from page 1
   }, []);
 
+  useEffect(() => {
+    fetchPosts(1);
+  }, [fetchPosts]);
+
+  // Infinite scroll
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -61,7 +77,7 @@ const Home = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loading, hasMore]);
 
-
+  // Post submit handler
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     if (!newPost.trim() && !mediaFile) return;
@@ -72,8 +88,6 @@ const Home = () => {
       formData.append("media", mediaFile);
     }
 
-    console.log('Submitting post:', { content: newPost, mediaFile });
-
     try {
       await API.post('/posts', formData, {
         headers: {
@@ -82,21 +96,19 @@ const Home = () => {
       });
 
       toast.success("Post created successfully!");
-
-      // Reset state and file input field
       setNewPost('');
       setMediaFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = null;
       }
-
-      fetchPosts(); // Refresh post list
+      fetchPosts();
     } catch (err) {
       toast.error("Failed to post");
       console.error(err);
     }
   };
 
+  // Delete post handler
   const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: 'Are you sure?',
@@ -121,27 +133,50 @@ const Home = () => {
     }
   };
 
-
+  // Edit post handler
   const handleEdit = (post) => {
     setEditingPostId(post._id);
     setEditedContent(post.content);
+    setEditedPreview(post.media ?
+      `${REMOTE_MEDIA_URL}${post._id}?t=${post.updatedAt || Date.now()}`
+      : null
+    );
   };
 
+  // Media change handler for edit
+  const handleEditedMediaChange = (e) => {
+    const file = e.target.files[0];
+    setEditedMediaFile(file);
+    setEditedPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  // Update post handler
   const handleUpdate = async () => {
     try {
-      await API.put(`/posts/${editingPostId}`, { content: editedContent });
+      const formData = new FormData();
+      formData.append("content", editedContent);
+      if (editedMediaFile) {
+        formData.append("media", editedMediaFile);
+      }
+
+      await API.put(`/posts/${editingPostId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
       toast.success("Post updated!");
       setEditingPostId(null);
-      setEditedContent('');
+      setEditedContent("");
+      setEditedMediaFile(null);
+      setEditedPreview(null);
       fetchPosts();
     } catch (err) {
       console.error("Update error:", err);
     }
   };
 
-  const [likeLoadingPostId, setLikeLoadingPostId] = useState(null);
+  // Like handler
   const handleLike = async (postId) => {
-    if (likeLoadingPostId === postId) return; // already processing this post
+    if (likeLoadingPostId === postId) return;
 
     setLikeLoadingPostId(postId);
     try {
@@ -154,6 +189,7 @@ const Home = () => {
     }
   };
 
+  // Add comment handler
   const handleAddComment = async (e, postId) => {
     e.preventDefault();
     const content = commentInputs[postId];
@@ -168,6 +204,7 @@ const Home = () => {
     }
   };
 
+  // Reply handler
   const handleReply = async (e, postId, commentId) => {
     e.preventDefault();
     const key = `reply-${postId}-${commentId}`;
@@ -183,15 +220,14 @@ const Home = () => {
     }
   };
 
-  const characterLimit = 200; // Limit to 200 characters
-
-  const isTruncated = (content) => content.length > characterLimit;
+  // Truncate helpers
+  const isTruncated = (content) => content.length > CHARACTER_LIMIT;
 
   const getDisplayContent = (content, postId) => {
     if (expandedPosts[postId] || !isTruncated(content)) {
       return content;
     }
-    return content.slice(0, characterLimit) + '...';
+    return content.slice(0, CHARACTER_LIMIT) + '...';
   };
 
   const toggleExpanded = (postId) => {
@@ -201,8 +237,8 @@ const Home = () => {
     }));
   };
 
-
-  const loadMorePosts = async () => {
+  // Load more posts for infinite scroll
+  const loadMorePosts = useCallback(async () => {
     if (loadingRef.current || loading) return;
 
     setLoading(true);
@@ -219,8 +255,8 @@ const Home = () => {
           const filteredPosts = newPosts.filter((p) => !existingIds.has(p._id));
           return [...prevPosts, ...filteredPosts];
         });
-        setPage(pageRef.current); // update current page
-        pageRef.current += 1; // increment for next scroll
+        setPage(pageRef.current);
+        pageRef.current += 1;
       }
     } catch (error) {
       console.error("Error loading more posts", error);
@@ -228,8 +264,9 @@ const Home = () => {
       setLoading(false);
       loadingRef.current = false;
     }
-  };
+  }, [loading]);
 
+  // Render
   return (
     <div className="container mt-5">
       {/* Share Post Card */}
@@ -245,14 +282,16 @@ const Home = () => {
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
                 required
+                aria-label="Post content"
               ></textarea>
-              <label>What's on your mind?</label>
+              <label htmlFor="postContent">What's on your mind?</label>
             </div>
             <input
               type="file"
               className="form-control mb-3"
               ref={fileInputRef}
               onChange={(e) => setMediaFile(e.target.files[0])}
+              aria-label="Upload media"
             />
             <div className="text-end">
               <button type="submit" className="btn btn-primary px-4">Post</button>
@@ -278,6 +317,24 @@ const Home = () => {
                     value={editedContent}
                     onChange={(e) => setEditedContent(e.target.value)}
                   />
+                  {editedPreview && (
+                    <div className="mb-3 text-center">
+                      <img
+                        src={editedPreview}
+                        alt="Preview"
+                        className="img-fluid rounded"
+                        style={{ maxHeight: "300px", objectFit: "cover" }}
+                      />
+                    </div>
+                  )}
+
+                  <input
+                    type="file"
+                    className="form-control mb-3"
+                    accept="image/*,video/*"
+                    onChange={handleEditedMediaChange}
+                  />
+
                   <div className="text-end">
                     <button className="btn btn-success me-2" onClick={handleUpdate}>Update</button>
                     <button className="btn btn-secondary" onClick={() => setEditingPostId(null)}>Cancel</button>
@@ -289,13 +346,13 @@ const Home = () => {
                   <div className="d-flex align-items-center mb-3">
                     <img
                       src={`https://ui-avatars.com/api/?name=${post.author?.fullName || "User"}&background=random`}
-                      alt="avatar"
+                      alt={`${post.author?.fullName || "User"} avatar`}
                       className="rounded-circle me-3"
                       width="50"
                       height="50"
                     />
                     <div className="flex-grow-1">
-                      <strong>{post.author?.fullName} ({post.author?.username})</strong>
+                      <strong>{post.author?.fullName || "User"} ({post.author?.username || "unknown"})</strong>
                       <div className="text-muted small">
                         {new Date(post.createdAt).toLocaleString()}
                         {post.edited && <span className="ms-2 text-warning">(edited)</span>}
@@ -326,6 +383,9 @@ const Home = () => {
                       <span
                         onClick={() => toggleExpanded(post._id)}
                         style={{ color: 'blue', cursor: 'pointer', fontWeight: 'bold' }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={expandedPosts[post._id] ? 'Show less' : 'Read more'}
                       >
                         {expandedPosts[post._id] ? ' Show less' : ' Read more'}
                       </span>
@@ -337,15 +397,15 @@ const Home = () => {
                     <div className="text-center my-3">
                       {post.media.contentType.startsWith("image") ? (
                         <img
-                          src={`https://mern-backend-s6eq.onrender.com/api/posts/media/${post._id}`}
-                          alt="Post"
+                          src={`${REMOTE_MEDIA_URL}${post._id}?t=${post.updatedAt || Date.now()}`}
+                          alt="Post media"
                           className="img-fluid rounded"
                           style={{ maxHeight: "300px", objectFit: "cover" }}
                         />
                       ) : post.media.contentType.startsWith("video") ? (
                         <video controls className="w-100 rounded" style={{ maxHeight: "300px" }}>
                           <source
-                            src={`https://mern-backend-s6eq.onrender.com/api/posts/media/${post._id}`}
+                            src={`${REMOTE_MEDIA_URL}${post._id}`}
                             type={post.media.contentType}
                           />
                           Your browser does not support the video tag.
@@ -395,16 +455,17 @@ const Home = () => {
                           onChange={(e) =>
                             setCommentInputs({ ...commentInputs, [post._id]: e.target.value })
                           }
+                          aria-label="Add comment"
                         />
                         <button type="submit" className="btn btn-sm btn-primary">Post</button>
                       </form>
 
                       {/* Comments & Replies */}
                       {(expandedPosts[post._id] ? post.comments : post.comments.slice(0, 2)).map((c, i) => (
-                        <div key={i} className="ps-3 border-start mt-2">
+                        <div key={c._id || i} className="ps-3 border-start mt-2">
                           <small className="text-muted d-block">💬 {c.content}</small>
                           {c.replies?.map((r, j) => (
-                            <div key={j} className="ps-3 border-start mt-1">
+                            <div key={r._id || j} className="ps-3 border-start mt-1">
                               <small className="text-muted">↳ {r.content}</small>
                             </div>
                           ))}
@@ -420,6 +481,7 @@ const Home = () => {
                                   [`reply-${post._id}-${c._id}`]: e.target.value,
                                 })
                               }
+                              aria-label="Reply to comment"
                             />
                             <button className="btn btn-sm btn-secondary">Reply</button>
                           </form>
@@ -447,7 +509,7 @@ const Home = () => {
           </div>
         ))
       )}
-      
+
       {loading && (
         <div className="text-center my-3">
           <div className="spinner-border text-primary" role="status">
@@ -455,11 +517,8 @@ const Home = () => {
           </div>
         </div>
       )}
-
     </div>
   );
-
-
 };
 
 export default Home;

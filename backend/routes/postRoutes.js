@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post('/', authMiddleware, upload.single('media'), createPost);
 router.get('/', authMiddleware, getPosts);
-router.put('/:id', authMiddleware, updatePost);
+router.put('/:id', authMiddleware, upload.single('media'), updatePost);
 router.delete('/:id', authMiddleware, deletePost);
 router.patch('/like/:postId', authMiddleware, likePost);
 router.post('/:postId/comments', authMiddleware, addComment);
